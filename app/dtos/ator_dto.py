@@ -95,6 +95,31 @@ class AtorCreateDTO(AtorBaseDTO):
 class AtorResponseDTO(AtorBaseDTO):
     id: Optional[int] = None
 
+@dataclass
+class AtorDetalhadoDTO(AtorBaseDTO):
+    id: Optional[int] = None
+    tipo_vinculo: Optional[int] = None
+    nome_responsavel: Optional[str] = None
+    email_responsavel: Optional[str] = None
+    telefone_cel_responsavel: Optional[str] = None
+    login_responsavel: Optional[str] = None
+
+    def to_dict(self):
+        data = super().to_dict()
+        data['id'] = self.id
+        if self.tipo_vinculo is not None:
+            data['TIPO_VINCULO'] = self.tipo_vinculo
+        if self.nome_responsavel is not None:
+            data['NOMER'] = self.nome_responsavel
+        if self.email_responsavel is not None:
+            data['EMAILR'] = self.email_responsavel
+        if self.telefone_cel_responsavel is not None:
+            data['TELEFONECEL'] = self.telefone_cel_responsavel
+        if self.login_responsavel is not None:
+            data['LOGINR'] = self.login_responsavel
+        if self.senha_responsavel is not None:
+            data['SENHAR'] = self.senha_responsavel
+        return data
 
 @dataclass
 class AtorIdNomeDTO:

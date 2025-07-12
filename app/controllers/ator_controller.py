@@ -2,13 +2,15 @@ from flask import request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restx import Namespace, Resource, fields
 
+from app.exceptions.custom_exceptions import HttpNotFoundError
 from app.services.ator_service import AtorService
 from app.services.auth_service import verify_token
 from app.dtos.ator_dto import (
     AtorBaseDTO, AtorCreateDTO, AtorResponseDTO, AtorIdNomeDTO, AtorTipoDTO, AtorAnoSessaoDTO,
     AtorDadosMensageriaDTO, AtorDadosCompletosDTO, AtorFotoDTO, AtorByEmailDTO, AtorNomeImagemDTO,
     AtorNomeRsDTO, AtorEmailRawDTO, AtorAutorizadoDTO, AtorUnidadeDTO, AtorDadosPesquisaDTO,
-    AtorDadosPesquisaAppDTO, AtorAlunoPorResponsavelDTO, AtorFilteredGridItemDTO, AtorGridItemDTO
+    AtorDadosPesquisaAppDTO, AtorAlunoPorResponsavelDTO, AtorFilteredGridItemDTO, AtorGridItemDTO,
+    AtorDetalhadoDTO
 )
 from werkzeug.exceptions import HTTPException, BadRequest, Conflict, NotFound, InternalServerError
 
@@ -61,6 +63,11 @@ create_ator_request_model = ator_ns.inherit('CreateAtorRequest', ator_model, {
     'LOGINR': fields.String(description='Login do responsável (se houver vínculo)'),
     'SENHAR': fields.String(description='Senha do responsável (se houver vínculo)')
 })
+
+ator_detalhado_model = ator_ns.inherit('AtorDetalhadoResponse', create_ator_request_model, {
+    'id': fields.Integer(readOnly=True, description='Identificador único do ator'),
+})
+
 
 ator_id_nome_model = ator_ns.model('AtorIdNome', {
     'id': fields.Integer(description='ID do Ator'),
@@ -256,7 +263,8 @@ class AtorList(Resource):
 class AtorSingle(Resource):
     @ator_ns.doc(security='Bearer Auth')
     @jwt_required()
-    @ator_ns.marshal_with(ator_model)
+    # A MUDANÇA PRINCIPAL ESTÁ AQUI:
+    @ator_ns.marshal_with(ator_detalhado_model)
     @ator_ns.response(403, 'Acesso Negado')
     @ator_ns.response(404, 'Ator não encontrado')
     def get(self, ator_id):
@@ -265,55 +273,15 @@ class AtorSingle(Resource):
             ator_ns.abort(403, "Acesso negado")
             
         try:
-            ator = ator_service.get_ator_by_id(ator_id)
-            if not ator:
-                ator_ns.abort(404, "Ator não encontrado")
-            return ator.to_dict()
+            # O serviço agora retorna o AtorDetalhadoDTO
+            ator_detalhado = ator_service.get_ator_by_id(ator_id)
+            
+            # O DTO já tem um método to_dict(), o marshal_with vai usá-lo
+            return ator_detalhado
+        except HttpNotFoundError as e:
+            ator_ns.abort(404, str(e))
         except Exception as e:
             ator_ns.abort(500, f'Erro interno do servidor: {str(e)}')
-
-    @ator_ns.doc(security='Bearer Auth')
-    @jwt_required()
-    @ator_ns.expect(ator_model, validate=True) 
-    @ator_ns.response(200, 'Ator atualizado com sucesso', ator_model)
-    @ator_ns.response(400, 'Erro de validação')
-    @ator_ns.response(403, 'Acesso Negado')
-    @ator_ns.response(404, 'Ator não encontrado')
-    @ator_ns.response(500, 'Erro interno do servidor')
-    def put(self, ator_id):
-        current_user_email = get_jwt_identity()
-        if not verify_token(current_user_email, 'write_ator'):
-            ator_ns.abort(403, "Acesso negado")
-
-        ator_base_dto = AtorBaseDTO.from_dict(ator_ns.payload)
-        try:
-            updated_ator = ator_service.update_ator(ator_id, ator_base_dto)
-            return updated_ator.to_dict(), 200
-        except ValueError as e:
-            ator_ns.abort(400, str(e))
-        except LookupError as e:
-            ator_ns.abort(404, str(e))
-        except Exception as e:
-            ator_ns.abort(500, f'Erro ao atualizar registro: {str(e)}')
-
-    @ator_ns.doc(security='Bearer Auth')
-    @jwt_required()
-    @ator_ns.response(200, 'Ator deletado com sucesso')
-    @ator_ns.response(403, 'Acesso Negado')
-    @ator_ns.response(404, 'Ator não encontrado')
-    def delete(self, ator_id):
-        current_user_email = get_jwt_identity()
-        if not verify_token(current_user_email, 'write_ator'):
-            ator_ns.abort(403, "Acesso negado")
-
-        try:
-            result = ator_service.soft_delete_ator(ator_id)
-            return result, 200
-        except LookupError as e:
-            ator_ns.abort(404, str(e))
-        except Exception as e:
-            ator_ns.abort(404, f'Erro ao apagar registro: {str(e)}')
-
 @ator_ns.route('/count-alunos')
 class AtorCountAlunos(Resource):
     @ator_ns.doc(security='Bearer Auth')

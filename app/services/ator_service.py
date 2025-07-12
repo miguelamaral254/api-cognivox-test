@@ -3,7 +3,7 @@ from app.models.user_model import Usuario, SegProdCognvoxUsuario
 from app.models.ator_vinculo_model import AtorVinculo
 from app.services.auth_service import base64_encode_py, remove_accents_py, send_email_py
 from app.validators.ator_validator import validate_ator_data, validate_vinculo_data
-from app.dtos.ator_dto import AtorCreateDTO, AtorBaseDTO
+from app.dtos.ator_dto import AtorCreateDTO, AtorBaseDTO, AtorDetalhadoDTO
 from app.exceptions.custom_exceptions import HttpConflictError, HttpBadRequestError, HttpInternalServerError, HttpNotFoundError
 from app.repositories.ator_repository import AtorRepository 
 from datetime import datetime, date
@@ -33,8 +33,45 @@ class AtorService:
     def get_all_atores(self):
         return self.ator_repository.get_all_atores()
 
-    def get_ator_by_id(self, ator_id):
-        return self.ator_repository.get_ator_by_id(ator_id)
+    def get_ator_by_id(self, ator_id: int) -> AtorDetalhadoDTO:
+        ator = self.ator_repository.get_ator_by_id(ator_id)
+        if not ator:
+            raise HttpNotFoundError("Ator não encontrado")
+
+        # Graças ao relationship, podemos acessar o usuário diretamente
+        usuario = ator.usuario
+
+        # Monta o DTO com os dados do ator e do usuário
+        ator_detalhado = AtorDetalhadoDTO(
+            id=ator.id,
+            nome=ator.nome,
+            cpf=ator.cpf,
+            ano_sessao=ator.ano_sessao,
+            data_nascimento=ator.data_nascimento,
+            data_inicio_intervencao=ator.data_inicio_intervencao,
+            reg_profissional=ator.reg_profissional,
+            email=ator.email,
+            telefone_cel=ator.telefone_cel,
+            telefone_fixo=ator.telefone_fixo,
+            idioma_id=ator.idioma_id,
+            unidade_id=ator.unidade_id,
+            profissao_id=ator.profissao_id,
+            endereco=ator.endereco,
+            cidade=ator.cidade,
+            estado=ator.estado,
+            pais=ator.pais,
+            hexadecimal_foto=ator.hexadecimal_foto,
+            modalidade_ensino_id=ator.modalidade_ensino_id,
+            status=ator.status,
+            # Campos do usuário relacionado
+            usuario=usuario.usuario if usuario else None,
+            senha=None,  # Nunca retorne a senha
+            grupo_usuario=usuario.cod_grupo_usuario if usuario else None
+        )
+        
+        # Aqui você poderia adicionar a lógica para buscar e incluir os dados do responsável (TIPO_VINCULO, etc.) se necessário
+
+        return ator_detalhado
 
     def create_ator(self, ator_dto: AtorCreateDTO, request_url_root: str):
         is_valid, error_message = validate_ator_data(ator_dto.to_dict())
@@ -53,117 +90,119 @@ class AtorService:
         data_inicio_intervencao = ator_dto.data_inicio_intervencao or date.today()
 
         try:
-            with self.ator_repository.begin_nested():
-                new_ator = Ator(
-                    nome=ator_dto.nome,
-                    cpf=ator_dto.cpf,
-                    data_nascimento=ator_dto.data_nascimento,
+            new_ator = Ator(
+                nome=ator_dto.nome,
+                cpf=ator_dto.cpf,
+                data_nascimento=ator_dto.data_nascimento,
+                data_inicio_intervencao=data_inicio_intervencao,
+                reg_profissional=ator_dto.reg_profissional,
+                email=ator_dto.email,
+                telefone_cel=ator_dto.telefone_cel,
+                telefone_fixo=ator_dto.telefone_fixo,
+                idioma_id=ator_dto.idioma_id,
+                unidade_id=ator_dto.unidade_id,
+                profissao_id=ator_dto.profissao_id,
+                endereco=ator_dto.endereco,
+                cidade=ator_dto.cidade,
+                estado=ator_dto.estado,
+                pais=ator_dto.pais,
+                hexadecimal_foto=ator_dto.hexadecimal_foto or '',
+                modalidade_ensino_id=ator_dto.modalidade_ensino_id,
+                status=ator_dto.status,
+                ano_sessao=ator_dto.ano_sessao
+            )
+
+            new_user = Usuario(
+                usuario=ator_dto.usuario,
+                senha=base64_encode_py(ator_dto.senha),
+                cod_empresa=ator_dto.unidade_id,
+                nome=ator_dto.nome,
+                email=ator_dto.email,
+                cod_status=1,
+                cod_grupo_usuario=ator_dto.grupo_usuario,
+                cod_nivel=1,
+                primeiro_acesso=1,
+                erros_login=0
+            )
+            
+            new_ator.usuario = new_user
+            
+            self.ator_repository.add_ator(new_ator)
+
+            if ator_dto.tipo_vinculo:
+                vinculo_data_for_validation = {
+                    'NOMER': ator_dto.nome_responsavel,
+                    'EMAILR': ator_dto.email_responsavel,
+                    'TELEFONECEL': ator_dto.telefone_cel_responsavel,
+                    'TIPO_VINCULO': ator_dto.tipo_vinculo,
+                    'UNIDADEID': ator_dto.unidade_id,
+                    'LOGINR': ator_dto.login_responsavel,
+                    'SENHAR': ator_dto.senha_responsavel
+                }
+                is_valid_vinculo, vinculo_error = validate_vinculo_data(vinculo_data_for_validation)
+                if not is_valid_vinculo:
+                    raise HttpBadRequestError(f"Erro nos dados do vínculo: {vinculo_error}")
+
+                new_responsible_ator = Ator(
+                    nome=ator_dto.nome_responsavel,
                     data_inicio_intervencao=data_inicio_intervencao,
-                    reg_profissional=ator_dto.reg_profissional,
-                    email=ator_dto.email,
-                    telefone_cel=ator_dto.telefone_cel,
-                    telefone_fixo=ator_dto.telefone_fixo,
+                    data_nascimento=date.today(),
+                    email=ator_dto.email_responsavel,
+                    telefone_cel=ator_dto.telefone_cel_responsavel,
                     idioma_id=ator_dto.idioma_id,
                     unidade_id=ator_dto.unidade_id,
-                    profissao_id=ator_dto.profissao_id,
+                    profissao_id=28,
                     endereco=ator_dto.endereco,
                     cidade=ator_dto.cidade,
                     estado=ator_dto.estado,
                     pais=ator_dto.pais,
-                    hexadecimal_foto=ator_dto.hexadecimal_foto or '',
                     modalidade_ensino_id=ator_dto.modalidade_ensino_id,
                     status=ator_dto.status,
-                    ano_sessao=ator_dto.ano_sessao
+                    ano_sessao=1
                 )
-                self.ator_repository.add_ator(new_ator)
-                self.ator_repository.flush()
 
-                new_user = Usuario(
-                    usuario=ator_dto.usuario,
-                    senha=base64_encode_py(ator_dto.senha),
+                new_responsible_user = Usuario(
+                    usuario=ator_dto.login_responsavel,
+                    senha=base64_encode_py(ator_dto.senha_responsavel),
                     cod_empresa=ator_dto.unidade_id,
-                    nome=ator_dto.nome,
-                    email=ator_dto.email,
+                    nome=ator_dto.nome_responsavel,
+                    email=ator_dto.email_responsavel,
                     cod_status=1,
                     cod_grupo_usuario=ator_dto.grupo_usuario,
                     cod_nivel=1,
                     primeiro_acesso=1,
                     erros_login=0
                 )
-                self.ator_repository.add_user(new_user)
+                
+                new_responsible_ator.usuario = new_responsible_user
+                
+                self.ator_repository.add_ator(new_responsible_ator)
                 self.ator_repository.flush()
 
-                new_sec_user = SegProdCognvoxUsuario(
-                    usuario=base64_encode_py(ator_dto.usuario),
-                    senha=base64_encode_py(ator_dto.senha),
-                    cod_status=1,
-                    cod_ordenacao=new_user.codigo
+                new_ator_vinculo = AtorVinculo(
+                    ator_id=new_responsible_ator.id,
+                    ator_di_id=new_ator.id,
+                    tipo_vinculo_id=ator_dto.tipo_vinculo
                 )
-                self.ator_repository.add_sec_user(new_sec_user)
+                self.ator_repository.add_ator_vinculo(new_ator_vinculo)
                 
-                if ator_dto.tipo_vinculo:
-                    vinculo_data_for_validation = {
-                        'NOMER': ator_dto.nome_responsavel,
-                        'EMAILR': ator_dto.email_responsavel,
-                        'TELEFONECEL': ator_dto.telefone_cel_responsavel,
-                        'TIPO_VINCULO': ator_dto.tipo_vinculo,
-                        'UNIDADEID': ator_dto.unidade_id,
-                        'LOGINR': ator_dto.login_responsavel,
-                        'SENHAR': ator_dto.senha_responsavel
-                    }
-                    is_valid_vinculo, vinculo_error = validate_vinculo_data(vinculo_data_for_validation)
-                    if not is_valid_vinculo:
-                        raise HttpBadRequestError(f"Erro nos dados do vínculo: {vinculo_error}")
-
-                    new_responsible_ator = Ator(
-                        nome=ator_dto.nome_responsavel,
-                        data_inicio_intervencao=data_inicio_intervencao,
-                        data_nascimento=date.today(),
-                        email=ator_dto.email_responsavel,
-                        telefone_cel=ator_dto.telefone_cel_responsavel,
-                        idioma_id=ator_dto.idioma_id,
-                        unidade_id=ator_dto.unidade_id,
-                        profissao_id=28,
-                        endereco=ator_dto.endereco,
-                        cidade=ator_dto.cidade,
-                        estado=ator_dto.estado,
-                        pais=ator_dto.pais,
-                        modalidade_ensino_id=ator_dto.modalidade_ensino_id,
-                        status=ator_dto.status,
-                        ano_sessao=1
-                    )
-                    self.ator_repository.add_ator(new_responsible_ator)
-                    self.ator_repository.flush()
-
-                    new_responsible_user = Usuario(
-                        usuario=ator_dto.login_responsavel,
-                        senha=base64_encode_py(ator_dto.senha_responsavel),
-                        cod_empresa=ator_dto.unidade_id,
-                        nome=ator_dto.nome_responsavel,
-                        email=ator_dto.email_responsavel,
-                        cod_status=1,
-                        cod_grupo_usuario=ator_dto.grupo_usuario,
-                        cod_nivel=1,
-                        primeiro_acesso=1,
-                        erros_login=0
-                    )
-                    self.ator_repository.add_user(new_responsible_user)
-                    self.ator_repository.flush()
-
-                    new_responsible_sec_user = SegProdCognvoxUsuario(
-                        usuario=base64_encode_py(ator_dto.login_responsavel),
-                        senha=base64_encode_py(ator_dto.senha_responsavel),
-                        cod_status=1,
-                        cod_ordenacao=new_responsible_user.codigo
-                    )
-                    self.ator_repository.add_sec_user(new_responsible_sec_user)
-                    
-                    new_ator_vinculo = AtorVinculo(
-                        ator_id=new_responsible_ator.id,
-                        ator_di_id=new_ator.id,
-                        tipo_vinculo_id=ator_dto.tipo_vinculo
-                    )
-                    self.ator_repository.add_ator_vinculo(new_ator_vinculo)
+                new_responsible_sec_user = SegProdCognvoxUsuario(
+                    usuario=base64_encode_py(ator_dto.login_responsavel),
+                    senha=base64_encode_py(ator_dto.senha_responsavel),
+                    cod_status=1,
+                    cod_ordenacao=new_responsible_user.codigo
+                )
+                self.ator_repository.add_sec_user(new_responsible_sec_user)
+            
+            self.ator_repository.flush()
+            
+            new_sec_user = SegProdCognvoxUsuario(
+                usuario=base64_encode_py(ator_dto.usuario),
+                senha=base64_encode_py(ator_dto.senha),
+                cod_status=1,
+                cod_ordenacao=new_user.codigo
+            )
+            self.ator_repository.add_sec_user(new_sec_user)
 
             self.ator_repository.commit()
 
@@ -186,6 +225,8 @@ class AtorService:
 
         except IntegrityError as e:
             self.ator_repository.rollback()
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            print(f"IntegrityError in {exc_tb.tb_frame.f_code.co_filename} at line {exc_tb.tb_lineno}: {e}", file=sys.stderr)
             if "Duplicate entry" in str(e):
                 raise HttpConflictError(f"Erro de duplicidade no banco de dados: {str(e)}") from e
             elif "foreign key constraint fails" in str(e):
@@ -194,7 +235,11 @@ class AtorService:
                 raise HttpInternalServerError(f"Erro inesperado no banco de dados: {str(e)}") from e
         except Exception as e:
             self.ator_repository.rollback()
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            print(f"Exception in {exc_tb.tb_frame.f_code.co_filename} at line {exc_tb.tb_lineno}: {e}", file=sys.stderr)
             raise
+
+    # Cole seus outros métodos aqui (update_ator, delete_ator, etc.)
 
     def update_ator(self, ator_id: int, ator_dto: AtorBaseDTO):
         is_valid, error_message = validate_ator_data(ator_dto.to_dict(), is_update=True)

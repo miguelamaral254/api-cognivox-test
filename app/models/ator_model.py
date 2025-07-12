@@ -1,3 +1,5 @@
+# app/models/ator_model.py
+
 from app import db
 from datetime import datetime
 
@@ -23,17 +25,19 @@ class Ator(db.Model):
     hexadecimal_foto = db.Column(db.String(255))
     modalidade_ensino_id = db.Column(db.Integer, db.ForeignKey('modalidade_ensino.id'))
     status = db.Column(db.Integer)
+
+    # Relacionamentos existentes
     unidade = db.relationship('Unidade', backref='atores')
     profissao = db.relationship('Profissao', backref='atores')
     modalidade_ensino = db.relationship('ModalidadeEnsino', backref='atores')
     vinculos_di = db.relationship('AtorVinculo', foreign_keys='AtorVinculo.ator_di_id', backref='ator_di', lazy=True)
     vinculos_ator = db.relationship('AtorVinculo', foreign_keys='AtorVinculo.ator_id', backref='ator_vinculado', lazy=True)
-    planos_trabalho_di = db.relationship('PlanoTrabalho', foreign_keys='PlanoTrabalho.ator_di_id', backref='ator_plano_di', lazy=True)
-    planos_trabalho_interacional = db.relationship('PlanoTrabalho', foreign_keys='PlanoTrabalho.ator_interacional_id', backref='ator_plano_interacional', lazy=True)
-    planos_trabalho_professor = db.relationship('PlanoTrabalho', foreign_keys='PlanoTrabalho.ator_professor_id', backref='ator_plano_professor', lazy=True)
-    planos_trabalho_psicologo = db.relationship('PlanoTrabalho', foreign_keys='PlanoTrabalho.ator_psicologo_id', backref='ator_plano_psicologo', lazy=True)
+
+    # NOVO RELACIONAMENTO COM USUARIO
+    usuario = db.relationship('Usuario', backref='ator', uselist=False, cascade="all, delete-orphan")
 
     def to_dict(self):
+        # ... seu método to_dict continua igual ...
         return {
             'id': self.id,
             'nome': self.nome,
@@ -56,3 +60,4 @@ class Ator(db.Model):
             'modalidade_ensino_id': self.modalidade_ensino_id,
             'status': self.status
         }
+

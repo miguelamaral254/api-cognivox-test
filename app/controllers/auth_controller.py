@@ -13,11 +13,17 @@ login_model = auth_ns.model('Login', {
     'senha': fields.String(required=True, description='Senha do usuário')
 })
 
+# O modelo de resposta volta a ser simples, contendo apenas o token.
+login_success_model = auth_ns.model('LoginSuccess', {
+    'access_token': fields.String
+})
+
 @auth_ns.route('/login') 
 class UserLogin(Resource):
     @auth_ns.doc('user_login') 
     @auth_ns.expect(login_model, validate=True)
-    @auth_ns.response(200, 'Login bem-sucedido', auth_ns.model('LoginSuccess', {'access_token': fields.String}))
+    # Usa o modelo de resposta simples.
+    @auth_ns.response(200, 'Login bem-sucedido', login_success_model)
     @auth_ns.response(400, 'Dados de login ausentes')
     @auth_ns.response(401, 'Usuário ou senha inválidos')
     def post(self):
@@ -38,5 +44,11 @@ class UserLogin(Resource):
         if user is None:
             auth_ns.abort(401, "Usuário ou senha inválidos")
 
-        access_token = create_access_token(identity=user.email)
+        # Define as informações adicionais que você quer no token.
+        additional_claims = {"ator_id": user.ator_id}
+        
+        # Cria o token com o email como identidade principal e o ator_id como um claim adicional.
+        access_token = create_access_token(identity=user.email, additional_claims=additional_claims)
+        
+        # Retorna apenas o token.
         return {'access_token': access_token}, 200
