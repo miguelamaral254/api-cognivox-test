@@ -7,3 +7,4 @@ Flask-Mail
 unidecode
 dotenv
 flask-restx
+flask-cors
