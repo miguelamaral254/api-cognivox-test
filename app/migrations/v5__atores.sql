@@ -1,0 +1,12 @@
+INSERT INTO cognvox.ator (id, nome, cpf, ano_sessao, data_nascimento, data_inicio_intervencao, reg_profissional, email, telefone_cel, telefone_fixo, idioma_id, unidade_id, profissao_id, endereco, cidade, estado, pais, hexadecimal_foto, modalidade_ensino_id, status) VALUES
+(2979, 'ANTHONY GABRIEL DA SILVA DIAS', '', 1, '2020-07-12', '2025-01-01', '', 'anthony.gabriel2979@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/2979antonyabel.jpg', 193, 1),
+(2980, 'ANTHONY ABEL DOS SANTOS PEREIRA', '', 1, '2021-07-12', '2025-01-01', '', 'anthony.abel2980@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/aluno_default.png', 193, 1),
+(2981, 'DANIEL WILSON PEREIRA DA SILVA', '', 1, '2022-07-12', '2025-01-01', '', 'daniel.wilson2981@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/5334DANIEL.jpg', 232, 1),
+(2982, 'JOAQUIM ALBUQUERQUE DE MACEDO', '', 1, '2021-07-12', '2025-01-01', '', 'joaquim.albuquerque2982@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/5334JOAQUIN.jpg', 232, 1),
+(6756, 'PAULO SÉRGIO DE ALMEIDA SANTOS FILHO', '', 1, '2021-07-12', '2025-01-01', '', 'paulo.sergio6756@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/6756p1.jpg', 233, 1),
+(6757, 'KAEL VASCONCELOS BISPO', '', 1, '2022-07-12', '2025-01-01', '', 'kael.vasconcelos6757@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/aluno_default.png', 232, 1),
+(6758, 'MARIA LUIZA DA SILVA', '', 1, '2020-07-12', '2025-01-01', '', 'maria.luiza6758@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/aluno_default.png', 163, 1),
+(6759, 'JOÃO MIGUEL SANTOS', '', 1, '2021-07-12', '2025-01-01', '', 'joao.miguel6759@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/aluno_default.png', 232, 1),
+(6760, 'HELENA COSTA', '', 1, '2022-07-12', '2025-01-01', '', 'helena.costa6760@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/aluno_default.png', 232, 1),
+(6761, 'ARTHUR PEREIRA', '', 1, '2020-07-12', '2025-01-01', '', 'arthur.pereira6761@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/aluno_default.png', 193, 1),
+(6762, 'ALICE DE SOUSA', '', 1, '2021-07-12', '2025-01-01', '', 'alice.sousa6762@email.com', '', '', NULL, 72, 1, '', 'Coruripe', '', '', '/src/assets/temp/aluno_default.png', 233, 1)
